@@ -64,11 +64,22 @@ function useImage(src) {
   const [image, setImage] = useState(null);
 
   useEffect(() => {
-    if (!src) return;
+    if (!src) {
+      setImage(null);
+      return;
+    }
+
+    let active = true;
     const img = new window.Image();
     img.crossOrigin = "anonymous";
-    img.onload = () => setImage(img);
+    img.onload = () => {
+      if (active) setImage(img);
+    };
     img.src = src;
+
+    return () => {
+      active = false;
+    };
   }, [src]);
 
   return image;
@@ -508,6 +519,550 @@ function StickerShape({
   );
 }
 
+function DesktopProjectPanel({
+  slides,
+  setSlides,
+  ratioKey,
+  setRatioKey,
+  fileRef,
+  addText,
+  exportProject,
+  importRef,
+}) {
+  return (
+    <div className="panel">
+      <h2>專案</h2>
+
+      <label className="field">
+        <span>輪播張數</span>
+        <input
+          type="range"
+          min="2"
+          max="10"
+          value={slides}
+          onChange={(e) => setSlides(Number(e.target.value))}
+        />
+        <strong>{slides} 張</strong>
+      </label>
+
+      <label className="field">
+        <span>比例</span>
+        <select value={ratioKey} onChange={(e) => setRatioKey(e.target.value)}>
+          {Object.keys(RATIOS).map((key) => (
+            <option key={key} value={key}>
+              {key}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <div className="button-row">
+        <button onClick={() => fileRef.current?.click()}>上傳圖片</button>
+        <button className="ghost" onClick={addText}>
+          新增文字
+        </button>
+      </div>
+
+      <div className="button-row">
+        <button className="ghost" onClick={exportProject}>
+          匯出 JSON
+        </button>
+        <button className="ghost" onClick={() => importRef.current?.click()}>
+          匯入 JSON
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DesktopAssetsPanel({ images, addImageToCanvas }) {
+  return (
+    <div className="panel">
+      <h2>素材</h2>
+      <div className="asset-grid">
+        {images.length === 0 && <div className="hint-card">先上傳圖片，再點縮圖加入畫布。</div>}
+        {images.map((img) => (
+          <button
+            key={img.id}
+            className="asset-btn"
+            onClick={() => addImageToCanvas(img)}
+            title={img.name}
+          >
+            <img src={img.src} alt={img.name} />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DesktopStickerPanel({ addSticker }) {
+  return (
+    <div className="panel">
+      <h2>貼紙</h2>
+      <div className="template-grid compact">
+        {STICKERS.map((st) => (
+          <button key={st.id} className="template-btn" onClick={() => addSticker(st.type)}>
+            {st.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DesktopBackgroundPanel({
+  backgroundMode,
+  setBackgroundMode,
+  bgPrimary,
+  setBgPrimary,
+  bgSecondary,
+  setBgSecondary,
+}) {
+  return (
+    <div className="panel">
+      <h2>背景</h2>
+      <label className="field">
+        <span>模式</span>
+        <select value={backgroundMode} onChange={(e) => setBackgroundMode(e.target.value)}>
+          <option value="solid">純色</option>
+          <option value="gradient">漸層</option>
+        </select>
+      </label>
+
+      <div className="color-row">
+        <label>
+          主色
+          <input type="color" value={bgPrimary} onChange={(e) => setBgPrimary(e.target.value)} />
+        </label>
+        <label>
+          副色
+          <input type="color" value={bgSecondary} onChange={(e) => setBgSecondary(e.target.value)} />
+        </label>
+      </div>
+    </div>
+  );
+}
+
+function DesktopTemplatePanel({ templateId, applyTemplate }) {
+  return (
+    <div className="panel">
+      <h2>模板</h2>
+      <div className="template-grid">
+        {TEMPLATES.map((t) => (
+          <button
+            key={t.id}
+            className={`template-btn ${templateId === t.id ? "active" : ""}`}
+            onClick={() => applyTemplate(t.id)}
+          >
+            {t.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InspectorContent({ selectedItem, updateElement, setShowGuides, showGuides }) {
+  if (!selectedItem) {
+    return <div className="hint-card">點一下畫布中的圖片、文字或貼紙。</div>;
+  }
+
+  return (
+    <>
+      {selectedItem?.type === "image" && (
+        <>
+          <label className="field">
+            <span>圓角</span>
+            <input
+              type="range"
+              min="0"
+              max="120"
+              value={selectedItem.radius || 0}
+              onChange={(e) => updateElement({ ...selectedItem, radius: Number(e.target.value) })}
+            />
+          </label>
+          <label className="field">
+            <span>陰影</span>
+            <input
+              type="range"
+              min="0"
+              max="40"
+              value={selectedItem.shadow || 0}
+              onChange={(e) => updateElement({ ...selectedItem, shadow: Number(e.target.value) })}
+            />
+          </label>
+          <label className="field">
+            <span>透明度</span>
+            <input
+              type="range"
+              min="0.1"
+              max="1"
+              step="0.01"
+              value={selectedItem.opacity ?? 1}
+              onChange={(e) => updateElement({ ...selectedItem, opacity: Number(e.target.value) })}
+            />
+          </label>
+          <label className="field">
+            <span>邊框粗細</span>
+            <input
+              type="range"
+              min="0"
+              max="20"
+              value={selectedItem.borderWidth || 0}
+              onChange={(e) =>
+                updateElement({ ...selectedItem, borderWidth: Number(e.target.value) })
+              }
+            />
+          </label>
+          <label className="field">
+            <span>邊框顏色</span>
+            <input
+              type="color"
+              value={selectedItem.borderColor || "#ffffff"}
+              onChange={(e) => updateElement({ ...selectedItem, borderColor: e.target.value })}
+            />
+          </label>
+        </>
+      )}
+
+      {selectedItem?.type === "text" && (
+        <>
+          <label className="field">
+            <span>文字內容</span>
+            <textarea
+              rows="4"
+              value={selectedItem.text}
+              onChange={(e) => updateElement({ ...selectedItem, text: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>字體大小</span>
+            <input
+              type="range"
+              min="16"
+              max="180"
+              value={selectedItem.fontSize}
+              onChange={(e) => updateElement({ ...selectedItem, fontSize: Number(e.target.value) })}
+            />
+          </label>
+          <label className="field">
+            <span>顏色</span>
+            <input
+              type="color"
+              value={selectedItem.fill || "#111111"}
+              onChange={(e) => updateElement({ ...selectedItem, fill: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>字重</span>
+            <select
+              value={selectedItem.fontStyle || "normal"}
+              onChange={(e) => updateElement({ ...selectedItem, fontStyle: e.target.value })}
+            >
+              <option value="normal">normal</option>
+              <option value="bold">bold</option>
+              <option value="italic">italic</option>
+            </select>
+          </label>
+          <label className="field">
+            <span>對齊</span>
+            <select
+              value={selectedItem.align || "left"}
+              onChange={(e) => updateElement({ ...selectedItem, align: e.target.value })}
+            >
+              <option value="left">left</option>
+              <option value="center">center</option>
+              <option value="right">right</option>
+            </select>
+          </label>
+        </>
+      )}
+
+      {selectedItem?.type === "sticker" && (
+        <>
+          <label className="field">
+            <span>顏色</span>
+            <input
+              type="color"
+              value={selectedItem.fill || "#ffffff"}
+              onChange={(e) => updateElement({ ...selectedItem, fill: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>透明度</span>
+            <input
+              type="range"
+              min="0.1"
+              max="1"
+              step="0.01"
+              value={selectedItem.opacity ?? 1}
+              onChange={(e) => updateElement({ ...selectedItem, opacity: Number(e.target.value) })}
+            />
+          </label>
+        </>
+      )}
+
+      <div className="button-row">
+        <button className="ghost" onClick={() => setShowGuides((v) => !v)}>
+          {showGuides ? "隱藏參考線" : "顯示參考線"}
+        </button>
+      </div>
+    </>
+  );
+}
+
+function DesktopInspectorPanel({ selectedItem, updateElement, setShowGuides, showGuides }) {
+  return (
+    <div className="panel">
+      <h2>選取物件</h2>
+      <InspectorContent
+        selectedItem={selectedItem}
+        updateElement={updateElement}
+        setShowGuides={setShowGuides}
+        showGuides={showGuides}
+      />
+    </div>
+  );
+}
+
+function PreviewPanel({ previews, downloadDataUrl, downloadAll }) {
+  return (
+    <div className="preview-panel">
+      <div className="preview-head">
+        <h2>切圖預覽</h2>
+        <p>先檢查每張接縫，再手動上傳到 IG。</p>
+      </div>
+
+      <div className="preview-grid">
+        {previews.length === 0 && <div className="hint-card">目前還沒有預覽圖。</div>}
+
+        {previews.map((src, idx) => (
+          <div key={idx} className="preview-card">
+            <img src={src} alt={`preview-${idx + 1}`} />
+            <button
+              onClick={() =>
+                downloadDataUrl(src, `carousel_${String(idx + 1).padStart(2, "0")}.png`)
+              }
+            >
+              下載 #{idx + 1}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div className="download-all-row">
+        <button onClick={downloadAll}>全部下載</button>
+      </div>
+    </div>
+  );
+}
+
+function MobileDrawer({
+  panel,
+  open,
+  onClose,
+  images,
+  addImageToCanvas,
+  slides,
+  setSlides,
+  ratioKey,
+  setRatioKey,
+  fileRef,
+  addText,
+  exportProject,
+  importRef,
+  backgroundMode,
+  setBackgroundMode,
+  bgPrimary,
+  setBgPrimary,
+  bgSecondary,
+  setBgSecondary,
+  templateId,
+  applyTemplate,
+  selectedItem,
+  updateElement,
+  showGuides,
+  setShowGuides,
+  previews,
+  downloadDataUrl,
+  downloadAll,
+  addSticker,
+}) {
+  return (
+    <>
+      <div className={`mobile-drawer-backdrop ${open ? "show" : ""}`} onClick={onClose} />
+      <div className={`mobile-drawer ${open ? "show" : ""}`}>
+        <div className="mobile-drawer-handle" />
+        <div className="mobile-drawer-head">
+          <strong>
+            {panel === "assets" && "素材"}
+            {panel === "project" && "專案"}
+            {panel === "style" && "背景與模板"}
+            {panel === "inspector" && "選取物件"}
+            {panel === "preview" && "預覽與下載"}
+          </strong>
+          <button className="ghost mobile-close-btn" onClick={onClose}>
+            關閉
+          </button>
+        </div>
+
+        <div className="mobile-drawer-body">
+          {panel === "assets" && (
+            <>
+              <div className="panel in-drawer">
+                <h2>素材</h2>
+                <div className="button-row">
+                  <button onClick={() => fileRef.current?.click()}>上傳圖片</button>
+                  <button className="ghost" onClick={addText}>
+                    新增文字
+                  </button>
+                </div>
+              </div>
+
+              <div className="panel in-drawer">
+                <h2>素材庫</h2>
+                <div className="asset-grid">
+                  {images.length === 0 && <div className="hint-card">先上傳圖片，再點縮圖加入畫布。</div>}
+                  {images.map((img) => (
+                    <button
+                      key={img.id}
+                      className="asset-btn"
+                      onClick={() => addImageToCanvas(img)}
+                      title={img.name}
+                    >
+                      <img src={img.src} alt={img.name} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="panel in-drawer">
+                <h2>貼紙</h2>
+                <div className="template-grid compact">
+                  {STICKERS.map((st) => (
+                    <button key={st.id} className="template-btn" onClick={() => addSticker(st.type)}>
+                      {st.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {panel === "project" && (
+            <div className="panel in-drawer">
+              <h2>專案設定</h2>
+
+              <label className="field">
+                <span>輪播張數</span>
+                <input
+                  type="range"
+                  min="2"
+                  max="10"
+                  value={slides}
+                  onChange={(e) => setSlides(Number(e.target.value))}
+                />
+                <strong>{slides} 張</strong>
+              </label>
+
+              <label className="field">
+                <span>比例</span>
+                <select value={ratioKey} onChange={(e) => setRatioKey(e.target.value)}>
+                  {Object.keys(RATIOS).map((key) => (
+                    <option key={key} value={key}>
+                      {key}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="button-row">
+                <button className="ghost" onClick={exportProject}>
+                  匯出 JSON
+                </button>
+                <button className="ghost" onClick={() => importRef.current?.click()}>
+                  匯入 JSON
+                </button>
+              </div>
+            </div>
+          )}
+
+          {panel === "style" && (
+            <>
+              <div className="panel in-drawer">
+                <h2>背景</h2>
+
+                <label className="field">
+                  <span>模式</span>
+                  <select value={backgroundMode} onChange={(e) => setBackgroundMode(e.target.value)}>
+                    <option value="solid">純色</option>
+                    <option value="gradient">漸層</option>
+                  </select>
+                </label>
+
+                <div className="color-row">
+                  <label>
+                    主色
+                    <input
+                      type="color"
+                      value={bgPrimary}
+                      onChange={(e) => setBgPrimary(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    副色
+                    <input
+                      type="color"
+                      value={bgSecondary}
+                      onChange={(e) => setBgSecondary(e.target.value)}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="panel in-drawer">
+                <h2>模板</h2>
+                <div className="template-grid">
+                  {TEMPLATES.map((t) => (
+                    <button
+                      key={t.id}
+                      className={`template-btn ${templateId === t.id ? "active" : ""}`}
+                      onClick={() => applyTemplate(t.id)}
+                    >
+                      {t.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {panel === "inspector" && (
+            <div className="panel in-drawer">
+              <h2>選取物件設定</h2>
+              <InspectorContent
+                selectedItem={selectedItem}
+                updateElement={updateElement}
+                setShowGuides={setShowGuides}
+                showGuides={showGuides}
+              />
+            </div>
+          )}
+
+          {panel === "preview" && (
+            <PreviewPanel
+              previews={previews}
+              downloadDataUrl={downloadDataUrl}
+              downloadAll={downloadAll}
+            />
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function App() {
   const [slides, setSlides] = useState(3);
   const [ratioKey, setRatioKey] = useState("4:5");
@@ -525,6 +1080,12 @@ export default function App() {
   const [userZoom, setUserZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isExporting, setIsExporting] = useState(false);
+
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth <= 768 : false
+  );
+  const [mobilePanel, setMobilePanel] = useState("assets");
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
 
   const containerRef = useRef(null);
   const stageRef = useRef(null);
@@ -552,21 +1113,24 @@ export default function App() {
 
   useEffect(() => {
     const onResize = () => {
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      setContainerSize({ w: rect.width, h: rect.height });
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setContainerSize({ w: rect.width, h: rect.height });
+      }
+      setIsMobile(window.innerWidth <= 768);
     };
+
     onResize();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
   const fitScale = useMemo(() => {
-    const pad = 32;
-    const usableW = Math.max(320, containerSize.w - pad);
-    const usableH = Math.max(260, containerSize.h - pad);
+    const pad = isMobile ? 16 : 32;
+    const usableW = Math.max(260, containerSize.w - pad);
+    const usableH = Math.max(220, containerSize.h - pad);
     return Math.min(usableW / canvasW, usableH / canvasH, 1);
-  }, [containerSize, canvasW, canvasH]);
+  }, [containerSize, canvasW, canvasH, isMobile]);
 
   const displayScale = fitScale * userZoom;
 
@@ -575,8 +1139,10 @@ export default function App() {
     const scaledH = canvasH * fitScale * zoom;
     const viewportW = containerSize.w;
     const viewportH = containerSize.h;
-    const minX = Math.min(0, viewportW - scaledW - 24);
-    const minY = Math.min(0, viewportH - scaledH - 24);
+
+    const minX = Math.min(0, viewportW - scaledW - (isMobile ? 10 : 24));
+    const minY = Math.min(0, viewportH - scaledH - (isMobile ? 10 : 24));
+
     return {
       x: clamp(nextX, minX, 0),
       y: clamp(nextY, minY, 0),
@@ -585,7 +1151,8 @@ export default function App() {
 
   useEffect(() => {
     setPan((prev) => clampPan(prev.x, prev.y, userZoom));
-  }, [fitScale, containerSize.w, containerSize.h]); // eslint-disable-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fitScale, containerSize.w, containerSize.h, isMobile]);
 
   const resetView = () => {
     setUserZoom(1);
@@ -622,7 +1189,10 @@ export default function App() {
   const snapGuides = useMemo(() => {
     const vertical = [0, canvasW / 2, canvasW];
     const horizontal = [0, canvasH / 2, canvasH];
+
     for (let i = 0; i <= slides; i++) vertical.push(i * singleW);
+    for (let i = 0; i < slides; i++) vertical.push(i * singleW + singleW / 2);
+
     return { vertical, horizontal };
   }, [canvasW, canvasH, slides, singleW]);
 
@@ -661,6 +1231,7 @@ export default function App() {
     };
     setElements((prev) => [...prev, item]);
     setSelectedId(item.id);
+    if (isMobile) setMobilePanel("inspector");
   };
 
   const onUploadFiles = async (e) => {
@@ -707,6 +1278,7 @@ export default function App() {
     };
     setElements((prev) => [...prev, item]);
     setSelectedId(item.id);
+    if (isMobile) setMobilePanel("inspector");
   };
 
   const addSticker = (type) => {
@@ -728,6 +1300,7 @@ export default function App() {
 
     setElements((prev) => [...prev, item]);
     setSelectedId(item.id);
+    if (isMobile) setMobilePanel("inspector");
   };
 
   const removeSelected = () => {
@@ -921,7 +1494,7 @@ export default function App() {
     const previousSelected = selectedId;
     setSelectedId(null);
 
-    await new Promise((r) => setTimeout(r, 40));
+    await new Promise((r) => setTimeout(r, 50));
 
     const stage = stageRef.current;
     if (!stage) {
@@ -954,7 +1527,7 @@ export default function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       refreshPreviews();
-    }, 100);
+    }, 220);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elements, slides, ratioKey, bgPrimary, bgSecondary, backgroundMode]);
@@ -1023,6 +1596,7 @@ export default function App() {
         const editable = activeTag === "input" || activeTag === "textarea";
         if (!editable && selectedId) removeSelected();
       }
+
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d") {
         e.preventDefault();
         if (!selectedItem) return;
@@ -1100,6 +1674,13 @@ export default function App() {
   };
 
   const handleViewportPointerDown = (e) => {
+    const target = e.target;
+    const isStageWrap = target.classList?.contains("canvas-stage-wrap");
+    const isPanBg = target.classList?.contains("stage-pan-layer");
+    const isScaleBox = target.classList?.contains("stage-scale-box");
+
+    if (!(isStageWrap || isPanBg || isScaleBox)) return;
+
     gestureRef.current.isPanning = true;
     gestureRef.current.startX = e.clientX;
     gestureRef.current.startY = e.clientY;
@@ -1132,7 +1713,20 @@ export default function App() {
       gestureRef.current.pinchStartPan = { ...pan };
       gestureRef.current.pinchCenter = midpoint;
       gestureRef.current.isPanning = false;
-    } else if (e.touches.length === 1) {
+      return;
+    }
+
+    if (e.touches.length === 1) {
+      const target = e.target;
+      const isStageWrap = target.classList?.contains("canvas-stage-wrap");
+      const isPanBg = target.classList?.contains("stage-pan-layer");
+      const isScaleBox = target.classList?.contains("stage-scale-box");
+
+      if (!(isStageWrap || isPanBg || isScaleBox)) {
+        gestureRef.current.isPanning = false;
+        return;
+      }
+
       gestureRef.current.isPanning = true;
       gestureRef.current.startX = e.touches[0].clientX;
       gestureRef.current.startY = e.touches[0].clientY;
@@ -1188,62 +1782,33 @@ export default function App() {
     return 18;
   }, []);
 
+  const openMobilePanel = (panel) => {
+    setMobilePanel(panel);
+    setMobilePanelOpen(true);
+  };
+
+  const closeMobilePanel = () => {
+    setMobilePanelOpen(false);
+  };
+
   return (
     <div className="app-shell">
-      <aside className="sidebar left">
-        <div className="panel">
-          <h2>專案</h2>
-          <label className="field">
-            <span>輪播張數</span>
-            <input type="range" min="2" max="10" value={slides} onChange={(e) => setSlides(Number(e.target.value))} />
-            <strong>{slides} 張</strong>
-          </label>
-
-          <label className="field">
-            <span>比例</span>
-            <select value={ratioKey} onChange={(e) => setRatioKey(e.target.value)}>
-              {Object.keys(RATIOS).map((key) => (
-                <option key={key} value={key}>{key}</option>
-              ))}
-            </select>
-          </label>
-
-          <div className="button-row">
-            <button onClick={() => fileRef.current?.click()}>上傳圖片</button>
-            <button className="ghost" onClick={addText}>新增文字</button>
-          </div>
-          <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onUploadFiles} />
-
-          <div className="button-row">
-            <button className="ghost" onClick={exportProject}>匯出 JSON</button>
-            <button className="ghost" onClick={() => importRef.current?.click()}>匯入 JSON</button>
-          </div>
-          <input ref={importRef} type="file" accept="application/json" hidden onChange={importProject} />
-        </div>
-
-        <div className="panel">
-          <h2>素材</h2>
-          <div className="asset-grid">
-            {images.length === 0 && <div className="hint-card">先上傳圖片，再點縮圖加入畫布。</div>}
-            {images.map((img) => (
-              <button key={img.id} className="asset-btn" onClick={() => addImageToCanvas(img)} title={img.name}>
-                <img src={img.src} alt={img.name} />
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="panel">
-          <h2>貼紙</h2>
-          <div className="template-grid compact">
-            {STICKERS.map((st) => (
-              <button key={st.id} className="template-btn" onClick={() => addSticker(st.type)}>
-                {st.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </aside>
+      {!isMobile && (
+        <aside className="sidebar left">
+          <DesktopProjectPanel
+            slides={slides}
+            setSlides={setSlides}
+            ratioKey={ratioKey}
+            setRatioKey={setRatioKey}
+            fileRef={fileRef}
+            addText={addText}
+            exportProject={exportProject}
+            importRef={importRef}
+          />
+          <DesktopAssetsPanel images={images} addImageToCanvas={addImageToCanvas} />
+          <DesktopStickerPanel addSticker={addSticker} />
+        </aside>
+      )}
 
       <main className="main">
         <div className="canvas-panel">
@@ -1252,11 +1817,37 @@ export default function App() {
               <strong>SCRL Lite</strong>
               <span className="sub"> 匯出已排除編輯輔助元素</span>
             </div>
+
             <div className="toolbar-actions">
-              <button className="ghost" onClick={sendBackward}>下移一層</button>
-              <button className="ghost" onClick={bringForward}>上移一層</button>
-              <button className="ghost danger" onClick={removeSelected}>刪除選取</button>
-              <button onClick={refreshPreviews}>更新預覽</button>
+              {!isMobile && (
+                <>
+                  <button className="ghost" onClick={sendBackward}>
+                    下移一層
+                  </button>
+                  <button className="ghost" onClick={bringForward}>
+                    上移一層
+                  </button>
+                  <button className="ghost danger" onClick={removeSelected}>
+                    刪除選取
+                  </button>
+                  <button onClick={refreshPreviews}>更新預覽</button>
+                </>
+              )}
+
+              {isMobile && (
+                <>
+                  <button className="ghost" onClick={sendBackward}>
+                    下移
+                  </button>
+                  <button className="ghost" onClick={bringForward}>
+                    上移
+                  </button>
+                  <button className="ghost danger" onClick={removeSelected}>
+                    刪除
+                  </button>
+                  <button onClick={() => openMobilePanel("preview")}>預覽</button>
+                </>
+              )}
             </div>
           </div>
 
@@ -1321,7 +1912,8 @@ export default function App() {
                         />
                       ))}
 
-                      {!isExporting && showGuides &&
+                      {!isExporting &&
+                        showGuides &&
                         Array.from({ length: slides - 1 }).map((_, i) => (
                           <Line
                             key={`slice-${i}`}
@@ -1336,14 +1928,32 @@ export default function App() {
                         <>
                           {activeGuides.vertical.map((x, idx) => (
                             <React.Fragment key={`gv-${idx}`}>
-                              <Line points={[x, 0, x, canvasH]} stroke={hexToRgba("#35f2a1", 0.22)} strokeWidth={10} />
-                              <Line points={[x, 0, x, canvasH]} stroke={hexToRgba("#35f2a1", 0.98)} dash={[14, 8]} strokeWidth={3} />
+                              <Line
+                                points={[x, 0, x, canvasH]}
+                                stroke={hexToRgba("#35f2a1", 0.22)}
+                                strokeWidth={10}
+                              />
+                              <Line
+                                points={[x, 0, x, canvasH]}
+                                stroke={hexToRgba("#35f2a1", 0.98)}
+                                dash={[14, 8]}
+                                strokeWidth={3}
+                              />
                             </React.Fragment>
                           ))}
                           {activeGuides.horizontal.map((y, idx) => (
                             <React.Fragment key={`gh-${idx}`}>
-                              <Line points={[0, y, canvasW, y]} stroke={hexToRgba("#35f2a1", 0.22)} strokeWidth={10} />
-                              <Line points={[0, y, canvasW, y]} stroke={hexToRgba("#35f2a1", 0.98)} dash={[14, 8]} strokeWidth={3} />
+                              <Line
+                                points={[0, y, canvasW, y]}
+                                stroke={hexToRgba("#35f2a1", 0.22)}
+                                strokeWidth={10}
+                              />
+                              <Line
+                                points={[0, y, canvasW, y]}
+                                stroke={hexToRgba("#35f2a1", 0.98)}
+                                dash={[14, 8]}
+                                strokeWidth={3}
+                              />
                             </React.Fragment>
                           ))}
                         </>
@@ -1417,149 +2027,106 @@ export default function App() {
             <button onClick={zoom100}>100%</button>
             <div className="mobile-zoom-readout">{Math.round(displayScale * 100)}%</div>
           </div>
+
+          {isMobile && (
+            <div className="mobile-tabbar">
+              <button
+                className={mobilePanel === "assets" ? "active" : ""}
+                onClick={() => openMobilePanel("assets")}
+              >
+                素材
+              </button>
+              <button
+                className={mobilePanel === "project" ? "active" : ""}
+                onClick={() => openMobilePanel("project")}
+              >
+                專案
+              </button>
+              <button
+                className={mobilePanel === "style" ? "active" : ""}
+                onClick={() => openMobilePanel("style")}
+              >
+                版型
+              </button>
+              <button
+                className={mobilePanel === "inspector" ? "active" : ""}
+                onClick={() => openMobilePanel("inspector")}
+              >
+                物件
+              </button>
+              <button
+                className={mobilePanel === "preview" ? "active" : ""}
+                onClick={() => openMobilePanel("preview")}
+              >
+                預覽
+              </button>
+            </div>
+          )}
         </div>
 
-        <div className="preview-panel">
-          <div className="preview-head">
-            <h2>切圖預覽</h2>
-            <p>先檢查每張接縫，再手動上傳到 IG。</p>
-          </div>
-          <div className="preview-grid">
-            {previews.map((src, idx) => (
-              <div key={idx} className="preview-card">
-                <img src={src} alt={`preview-${idx + 1}`} />
-                <button onClick={() => downloadDataUrl(src, `carousel_${String(idx + 1).padStart(2, "0")}.png`)}>
-                  下載 #{idx + 1}
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="download-all-row">
-            <button onClick={downloadAll}>全部下載</button>
-          </div>
-        </div>
+        {!isMobile && (
+          <PreviewPanel
+            previews={previews}
+            downloadDataUrl={downloadDataUrl}
+            downloadAll={downloadAll}
+          />
+        )}
       </main>
 
-      <aside className="sidebar right">
-        <div className="panel">
-          <h2>背景</h2>
-          <label className="field">
-            <span>模式</span>
-            <select value={backgroundMode} onChange={(e) => setBackgroundMode(e.target.value)}>
-              <option value="solid">純色</option>
-              <option value="gradient">漸層</option>
-            </select>
-          </label>
+      {!isMobile && (
+        <aside className="sidebar right">
+          <DesktopBackgroundPanel
+            backgroundMode={backgroundMode}
+            setBackgroundMode={setBackgroundMode}
+            bgPrimary={bgPrimary}
+            setBgPrimary={setBgPrimary}
+            bgSecondary={bgSecondary}
+            setBgSecondary={setBgSecondary}
+          />
+          <DesktopTemplatePanel templateId={templateId} applyTemplate={applyTemplate} />
+          <DesktopInspectorPanel
+            selectedItem={selectedItem}
+            updateElement={updateElement}
+            setShowGuides={setShowGuides}
+            showGuides={showGuides}
+          />
+        </aside>
+      )}
 
-          <div className="color-row">
-            <label>
-              主色
-              <input type="color" value={bgPrimary} onChange={(e) => setBgPrimary(e.target.value)} />
-            </label>
-            <label>
-              副色
-              <input type="color" value={bgSecondary} onChange={(e) => setBgSecondary(e.target.value)} />
-            </label>
-          </div>
-        </div>
+      <MobileDrawer
+        panel={mobilePanel}
+        open={mobilePanelOpen}
+        onClose={closeMobilePanel}
+        images={images}
+        addImageToCanvas={addImageToCanvas}
+        slides={slides}
+        setSlides={setSlides}
+        ratioKey={ratioKey}
+        setRatioKey={setRatioKey}
+        fileRef={fileRef}
+        addText={addText}
+        exportProject={exportProject}
+        importRef={importRef}
+        backgroundMode={backgroundMode}
+        setBackgroundMode={setBackgroundMode}
+        bgPrimary={bgPrimary}
+        setBgPrimary={setBgPrimary}
+        bgSecondary={bgSecondary}
+        setBgSecondary={setBgSecondary}
+        templateId={templateId}
+        applyTemplate={applyTemplate}
+        selectedItem={selectedItem}
+        updateElement={updateElement}
+        showGuides={showGuides}
+        setShowGuides={setShowGuides}
+        previews={previews}
+        downloadDataUrl={downloadDataUrl}
+        downloadAll={downloadAll}
+        addSticker={addSticker}
+      />
 
-        <div className="panel">
-          <h2>模板</h2>
-          <div className="template-grid">
-            {TEMPLATES.map((t) => (
-              <button
-                key={t.id}
-                className={`template-btn ${templateId === t.id ? "active" : ""}`}
-                onClick={() => applyTemplate(t.id)}
-              >
-                {t.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="panel">
-          <h2>選取物件</h2>
-          {!selectedItem && <div className="hint-card">點一下畫布中的圖片、文字或貼紙。</div>}
-
-          {selectedItem?.type === "image" && (
-            <>
-              <label className="field">
-                <span>圓角</span>
-                <input type="range" min="0" max="120" value={selectedItem.radius || 0} onChange={(e) => updateElement({ ...selectedItem, radius: Number(e.target.value) })} />
-              </label>
-              <label className="field">
-                <span>陰影</span>
-                <input type="range" min="0" max="40" value={selectedItem.shadow || 0} onChange={(e) => updateElement({ ...selectedItem, shadow: Number(e.target.value) })} />
-              </label>
-              <label className="field">
-                <span>透明度</span>
-                <input type="range" min="0.1" max="1" step="0.01" value={selectedItem.opacity ?? 1} onChange={(e) => updateElement({ ...selectedItem, opacity: Number(e.target.value) })} />
-              </label>
-              <label className="field">
-                <span>邊框粗細</span>
-                <input type="range" min="0" max="20" value={selectedItem.borderWidth || 0} onChange={(e) => updateElement({ ...selectedItem, borderWidth: Number(e.target.value) })} />
-              </label>
-              <label className="field">
-                <span>邊框顏色</span>
-                <input type="color" value={selectedItem.borderColor || "#ffffff"} onChange={(e) => updateElement({ ...selectedItem, borderColor: e.target.value })} />
-              </label>
-            </>
-          )}
-
-          {selectedItem?.type === "text" && (
-            <>
-              <label className="field">
-                <span>文字內容</span>
-                <textarea rows="4" value={selectedItem.text} onChange={(e) => updateElement({ ...selectedItem, text: e.target.value })} />
-              </label>
-              <label className="field">
-                <span>字體大小</span>
-                <input type="range" min="16" max="180" value={selectedItem.fontSize} onChange={(e) => updateElement({ ...selectedItem, fontSize: Number(e.target.value) })} />
-              </label>
-              <label className="field">
-                <span>顏色</span>
-                <input type="color" value={selectedItem.fill || "#111111"} onChange={(e) => updateElement({ ...selectedItem, fill: e.target.value })} />
-              </label>
-              <label className="field">
-                <span>字重</span>
-                <select value={selectedItem.fontStyle || "normal"} onChange={(e) => updateElement({ ...selectedItem, fontStyle: e.target.value })}>
-                  <option value="normal">normal</option>
-                  <option value="bold">bold</option>
-                  <option value="italic">italic</option>
-                </select>
-              </label>
-              <label className="field">
-                <span>對齊</span>
-                <select value={selectedItem.align || "left"} onChange={(e) => updateElement({ ...selectedItem, align: e.target.value })}>
-                  <option value="left">left</option>
-                  <option value="center">center</option>
-                  <option value="right">right</option>
-                </select>
-              </label>
-            </>
-          )}
-
-          {selectedItem?.type === "sticker" && (
-            <>
-              <label className="field">
-                <span>顏色</span>
-                <input type="color" value={selectedItem.fill || "#ffffff"} onChange={(e) => updateElement({ ...selectedItem, fill: e.target.value })} />
-              </label>
-              <label className="field">
-                <span>透明度</span>
-                <input type="range" min="0.1" max="1" step="0.01" value={selectedItem.opacity ?? 1} onChange={(e) => updateElement({ ...selectedItem, opacity: Number(e.target.value) })} />
-              </label>
-            </>
-          )}
-
-          <div className="button-row">
-            <button className="ghost" onClick={() => setShowGuides((v) => !v)}>
-              {showGuides ? "隱藏參考線" : "顯示參考線"}
-            </button>
-          </div>
-        </div>
-      </aside>
+      <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onUploadFiles} />
+      <input ref={importRef} type="file" accept="application/json" hidden onChange={importProject} />
     </div>
   );
 }
