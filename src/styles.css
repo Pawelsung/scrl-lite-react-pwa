@@ -1,0 +1,170 @@
+:root {
+  --bg: #0f1115;
+  --panel: #171b21;
+  --panel-2: #1f2530;
+  --line: #2c3442;
+  --text: #f5f7fb;
+  --muted: #9aa4b2;
+  --accent: #7aa2ff;
+}
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif; }
+button, input, select, textarea { font: inherit; }
+button, input, select, textarea {
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+button { cursor: pointer; }
+button.primary { background: var(--accent); color: #08111f; border-color: transparent; font-weight: 800; }
+button.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.shell {
+  display: grid;
+  grid-template-columns: 300px 1fr 330px;
+  min-height: 100vh;
+}
+.panel {
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  overflow: auto;
+}
+.right-panel { border-left: 1px solid var(--line); border-right: 0; }
+.section {
+  padding: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.section h2, .section h3 { margin: 0 0 12px; }
+label { display: block; margin: 12px 0 8px; color: var(--muted); font-size: 13px; }
+.muted { color: var(--muted); font-size: 13px; line-height: 1.55; margin: 6px 0 0; }
+.value-row { margin-top: 8px; color: var(--text); font-weight: 700; }
+.toolbar-row { display: flex; gap: 10px; }
+.toolbar-row.top8 { margin-top: 10px; }
+.toolbar-row.compact { align-items: center; }
+.upload-label {
+  display: block;
+  background: var(--panel-2);
+  border: 1px dashed #465064;
+  text-align: center;
+  padding: 12px;
+  border-radius: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+.compact-label { padding: 10px 12px; margin: 0; }
+.assets-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.asset-card {
+  padding: 8px;
+  display: grid;
+  gap: 8px;
+  text-align: left;
+}
+.asset-card img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 12px;
+}
+.asset-card span {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.workspace {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-width: 0;
+}
+.workspace-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(15,17,21,.85);
+  backdrop-filter: blur(8px);
+}
+.stage-wrap {
+  overflow: auto;
+  padding: 24px;
+  background:
+    linear-gradient(45deg, rgba(255,255,255,0.035) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.035) 75%),
+    linear-gradient(45deg, rgba(255,255,255,0.035) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.035) 75%);
+  background-position: 0 0, 14px 14px;
+  background-size: 28px 28px;
+}
+.stage-inner {
+  margin: 0 auto;
+  border-radius: 26px;
+  overflow: hidden;
+  box-shadow: 0 18px 56px rgba(0,0,0,.35);
+}
+.preview-panel {
+  padding: 16px 18px 22px;
+  border-top: 1px solid var(--line);
+  background: #11151b;
+}
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+}
+.preview-card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 10px;
+  background: var(--panel);
+}
+.preview-card img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: 12px;
+  display: block;
+  background: #fff;
+}
+.preview-card a {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  margin-top: 10px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  padding: 9px 10px;
+  border-radius: 12px;
+}
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.template-list, .form-grid {
+  display: grid;
+  gap: 10px;
+}
+textarea { width: 100%; resize: vertical; }
+input[type="range"] { padding: 0; }
+input[type="color"] { min-height: 42px; padding: 4px; }
+@media (max-width: 1180px) {
+  .shell { grid-template-columns: 1fr; }
+  .panel { max-height: none; border-right: 0; }
+  .right-panel { border-left: 0; }
+  .workspace { min-height: 55vh; }
+}
