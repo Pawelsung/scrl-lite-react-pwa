@@ -255,11 +255,11 @@ button.danger {
   display: flex;
   gap: 8px;
   align-items: center;
-  background: rgba(8, 12, 18, 0.75);
+  background: rgba(8, 12, 18, 0.78);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 18px;
   padding: 8px;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
 }
 
 .canvas-zoom-toolbar button {
@@ -394,26 +394,82 @@ button.danger {
 }
 
 @media (max-width: 768px) {
+  .app-shell {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .panel {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .canvas-toolbar {
+    padding: 12px 14px;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .toolbar-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .toolbar-actions button {
+    width: 100%;
+  }
+
+  .canvas-stage-wrap {
+    padding: 10px;
+  }
+
+  .stage-pan-layer {
+    left: 10px;
+    top: 10px;
+  }
+
   .canvas-zoom-toolbar {
-    left: 12px;
-    right: 12px;
-    top: 12px;
-    justify-content: space-between;
-    flex-wrap: wrap;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    top: auto;
+    border-radius: 18px;
+    padding: 10px;
+    gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .canvas-zoom-toolbar button {
-    flex: 1 1 auto;
-    min-width: 64px;
-    padding: 12px 14px;
+    min-width: 0;
+    width: 100%;
+    padding: 12px 8px;
+    font-size: 14px;
+    border-radius: 12px;
   }
 
   .zoom-readout {
+    grid-column: 1 / -1;
     width: 100%;
     text-align: center;
+    padding-top: 4px;
+    font-size: 13px;
   }
 
   .preview-grid {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    padding: 10px;
+  }
+
+  .preview-card {
+    border-radius: 18px;
+    padding: 10px;
+  }
+
+  .preview-card img {
+    border-radius: 14px;
   }
 }

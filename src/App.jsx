@@ -32,7 +32,9 @@ const STICKERS = [
   { id: "circle", label: "圓點", type: "circle" },
 ];
 
-const SNAP_THRESHOLD = 12;
+const SNAP_THRESHOLD = 18;
+const SNAP_RELEASE = 28;
+const EDGE_OVERDRAG = 140;
 const MIN_ZOOM = 0.35;
 const MAX_ZOOM = 3;
 
@@ -72,6 +74,72 @@ function useImage(src) {
   return image;
 }
 
+function getBestSnap(nextX, nextY, width, height, snapGuides, canvasW, canvasH) {
+  const centerX = nextX + width / 2;
+  const centerY = nextY + height / 2;
+
+  let x = nextX;
+  let y = nextY;
+  let vertical = null;
+  let horizontal = null;
+
+  let bestV = { diff: Infinity, guide: null, mode: null };
+  let bestH = { diff: Infinity, guide: null, mode: null };
+
+  const xCandidates = [
+    { key: "left", value: nextX },
+    { key: "center", value: centerX },
+    { key: "right", value: nextX + width },
+  ];
+
+  const yCandidates = [
+    { key: "top", value: nextY },
+    { key: "center", value: centerY },
+    { key: "bottom", value: nextY + height },
+  ];
+
+  for (const guide of snapGuides.vertical) {
+    for (const c of xCandidates) {
+      const diff = Math.abs(c.value - guide);
+      if (diff < bestV.diff) {
+        bestV = { diff, guide, mode: c.key };
+      }
+    }
+  }
+
+  for (const guide of snapGuides.horizontal) {
+    for (const c of yCandidates) {
+      const diff = Math.abs(c.value - guide);
+      if (diff < bestH.diff) {
+        bestH = { diff, guide, mode: c.key };
+      }
+    }
+  }
+
+  if (bestV.diff <= SNAP_THRESHOLD) {
+    if (bestV.mode === "left") x = bestV.guide;
+    if (bestV.mode === "center") x = bestV.guide - width / 2;
+    if (bestV.mode === "right") x = bestV.guide - width;
+    vertical = bestV.guide;
+  } else if (bestV.diff > SNAP_RELEASE) {
+    vertical = null;
+  }
+
+  if (bestH.diff <= SNAP_THRESHOLD) {
+    if (bestH.mode === "top") y = bestH.guide;
+    if (bestH.mode === "center") y = bestH.guide - height / 2;
+    if (bestH.mode === "bottom") y = bestH.guide - height;
+    horizontal = bestH.guide;
+  } else if (bestH.diff > SNAP_RELEASE) {
+    horizontal = null;
+  }
+
+  x = clamp(x, -EDGE_OVERDRAG, canvasW - width + EDGE_OVERDRAG);
+  y = clamp(y, -EDGE_OVERDRAG, canvasH - height + EDGE_OVERDRAG);
+
+  return { x, y, vertical, horizontal };
+}
+
 function DraggableImage({
   item,
   isSelected,
@@ -92,54 +160,6 @@ function DraggableImage({
       trRef.current.getLayer()?.batchDraw();
     }
   }, [isSelected]);
-
-  const applySnap = (nextX, nextY, width, height) => {
-    const centerX = nextX + width / 2;
-    const centerY = nextY + height / 2;
-    let x = nextX;
-    let y = nextY;
-    let vertical = null;
-    let horizontal = null;
-
-    const xCandidates = [
-      { key: "left", value: nextX },
-      { key: "center", value: centerX },
-      { key: "right", value: nextX + width },
-    ];
-
-    const yCandidates = [
-      { key: "top", value: nextY },
-      { key: "center", value: centerY },
-      { key: "bottom", value: nextY + height },
-    ];
-
-    for (const guide of snapGuides.vertical) {
-      for (const c of xCandidates) {
-        if (Math.abs(c.value - guide) <= SNAP_THRESHOLD) {
-          if (c.key === "left") x = guide;
-          if (c.key === "center") x = guide - width / 2;
-          if (c.key === "right") x = guide - width;
-          vertical = guide;
-        }
-      }
-    }
-
-    for (const guide of snapGuides.horizontal) {
-      for (const c of yCandidates) {
-        if (Math.abs(c.value - guide) <= SNAP_THRESHOLD) {
-          if (c.key === "top") y = guide;
-          if (c.key === "center") y = guide - height / 2;
-          if (c.key === "bottom") y = guide - height;
-          horizontal = guide;
-        }
-      }
-    }
-
-    x = clamp(x, 0, Math.max(0, canvasW - width));
-    y = clamp(y, 0, Math.max(0, canvasH - height));
-
-    return { x, y, vertical, horizontal };
-  };
 
   return (
     <>
@@ -163,7 +183,15 @@ function DraggableImage({
         onTap={onSelect}
         onDragMove={(e) => {
           const node = e.target;
-          const snapped = applySnap(node.x(), node.y(), item.width, item.height);
+          const snapped = getBestSnap(
+            node.x(),
+            node.y(),
+            item.width,
+            item.height,
+            snapGuides,
+            canvasW,
+            canvasH
+          );
           node.position({ x: snapped.x, y: snapped.y });
           onChange({
             ...item,
@@ -208,8 +236,8 @@ function DraggableImage({
           rotateEnabled
           keepRatio
           anchorSize={transformerAnchorSize}
-          borderStroke="#78a7ff"
-          anchorStroke="#78a7ff"
+          borderStroke="#7db2ff"
+          anchorStroke="#7db2ff"
           anchorFill="#0b0f17"
           enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right"]}
           boundBoxFunc={(oldBox, newBox) => {
@@ -245,53 +273,6 @@ function DraggableText({
   const width = item.width || 400;
   const height = item.fontSize * 1.6;
 
-  const applySnap = (nextX, nextY) => {
-    const centerX = nextX + width / 2;
-    const centerY = nextY + height / 2;
-    let x = nextX;
-    let y = nextY;
-    let vertical = null;
-    let horizontal = null;
-
-    const xCandidates = [
-      { key: "left", value: nextX },
-      { key: "center", value: centerX },
-      { key: "right", value: nextX + width },
-    ];
-    const yCandidates = [
-      { key: "top", value: nextY },
-      { key: "center", value: centerY },
-      { key: "bottom", value: nextY + height },
-    ];
-
-    for (const guide of snapGuides.vertical) {
-      for (const c of xCandidates) {
-        if (Math.abs(c.value - guide) <= SNAP_THRESHOLD) {
-          if (c.key === "left") x = guide;
-          if (c.key === "center") x = guide - width / 2;
-          if (c.key === "right") x = guide - width;
-          vertical = guide;
-        }
-      }
-    }
-
-    for (const guide of snapGuides.horizontal) {
-      for (const c of yCandidates) {
-        if (Math.abs(c.value - guide) <= SNAP_THRESHOLD) {
-          if (c.key === "top") y = guide;
-          if (c.key === "center") y = guide - height / 2;
-          if (c.key === "bottom") y = guide - height;
-          horizontal = guide;
-        }
-      }
-    }
-
-    x = clamp(x, 0, Math.max(0, canvasW - width));
-    y = clamp(y, 0, Math.max(0, canvasH - height));
-
-    return { x, y, vertical, horizontal };
-  };
-
   return (
     <>
       <Text
@@ -311,7 +292,15 @@ function DraggableText({
         onTap={onSelect}
         onDragMove={(e) => {
           const node = e.target;
-          const snapped = applySnap(node.x(), node.y());
+          const snapped = getBestSnap(
+            node.x(),
+            node.y(),
+            width,
+            height,
+            snapGuides,
+            canvasW,
+            canvasH
+          );
           node.position({ x: snapped.x, y: snapped.y });
           onChange({
             ...item,
@@ -347,8 +336,8 @@ function DraggableText({
           ref={trRef}
           rotateEnabled
           anchorSize={transformerAnchorSize}
-          borderStroke="#78a7ff"
-          anchorStroke="#78a7ff"
+          borderStroke="#7db2ff"
+          anchorStroke="#7db2ff"
           anchorFill="#0b0f17"
           enabledAnchors={["middle-left", "middle-right"]}
           boundBoxFunc={(oldBox, newBox) => {
@@ -384,53 +373,6 @@ function StickerShape({
   const width = item.width;
   const height = item.height;
 
-  const applySnap = (nextX, nextY) => {
-    const centerX = nextX + width / 2;
-    const centerY = nextY + height / 2;
-    let x = nextX;
-    let y = nextY;
-    let vertical = null;
-    let horizontal = null;
-
-    const xCandidates = [
-      { key: "left", value: nextX },
-      { key: "center", value: centerX },
-      { key: "right", value: nextX + width },
-    ];
-    const yCandidates = [
-      { key: "top", value: nextY },
-      { key: "center", value: centerY },
-      { key: "bottom", value: nextY + height },
-    ];
-
-    for (const guide of snapGuides.vertical) {
-      for (const c of xCandidates) {
-        if (Math.abs(c.value - guide) <= SNAP_THRESHOLD) {
-          if (c.key === "left") x = guide;
-          if (c.key === "center") x = guide - width / 2;
-          if (c.key === "right") x = guide - width;
-          vertical = guide;
-        }
-      }
-    }
-
-    for (const guide of snapGuides.horizontal) {
-      for (const c of yCandidates) {
-        if (Math.abs(c.value - guide) <= SNAP_THRESHOLD) {
-          if (c.key === "top") y = guide;
-          if (c.key === "center") y = guide - height / 2;
-          if (c.key === "bottom") y = guide - height;
-          horizontal = guide;
-        }
-      }
-    }
-
-    x = clamp(x, 0, Math.max(0, canvasW - width));
-    y = clamp(y, 0, Math.max(0, canvasH - height));
-
-    return { x, y, vertical, horizontal };
-  };
-
   return (
     <>
       <Group
@@ -444,7 +386,15 @@ function StickerShape({
         onTap={onSelect}
         onDragMove={(e) => {
           const node = e.target;
-          const snapped = applySnap(node.x(), node.y());
+          const snapped = getBestSnap(
+            node.x(),
+            node.y(),
+            width,
+            height,
+            snapGuides,
+            canvasW,
+            canvasH
+          );
           node.position({ x: snapped.x, y: snapped.y });
           onChange({
             ...item,
@@ -518,8 +468,8 @@ function StickerShape({
           rotateEnabled
           keepRatio
           anchorSize={transformerAnchorSize}
-          borderStroke="#78a7ff"
-          anchorStroke="#78a7ff"
+          borderStroke="#7db2ff"
+          anchorStroke="#7db2ff"
           anchorFill="#0b0f17"
           enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right"]}
         />
@@ -592,10 +542,8 @@ export default function App() {
   const clampPan = (nextX, nextY, zoom = userZoom) => {
     const scaledW = canvasW * fitScale * zoom;
     const scaledH = canvasH * fitScale * zoom;
-
     const viewportW = containerSize.w;
     const viewportH = containerSize.h;
-
     const minX = Math.min(0, viewportW - scaledW - 24);
     const minY = Math.min(0, viewportH - scaledH - 24);
     const maxX = 0;
@@ -646,11 +594,7 @@ export default function App() {
   const snapGuides = useMemo(() => {
     const vertical = [0, canvasW / 2, canvasW];
     const horizontal = [0, canvasH / 2, canvasH];
-
-    for (let i = 0; i <= slides; i++) {
-      vertical.push(i * singleW);
-    }
-
+    for (let i = 0; i <= slides; i++) vertical.push(i * singleW);
     return { vertical, horizontal };
   }, [canvasW, canvasH, slides, singleW]);
 
@@ -947,7 +891,6 @@ export default function App() {
   const exportSlices = () => {
     const stage = stageRef.current;
     if (!stage) return [];
-
     const list = [];
     for (let i = 0; i < slides; i++) {
       const dataUrl = stage.toDataURL({
@@ -1025,7 +968,7 @@ export default function App() {
         setElements(data.elements || []);
         setTemplateId(data.templateId || "blank");
         setSelectedId(null);
-      } catch (err) {
+      } catch {
         alert("JSON 專案檔讀取失敗");
       }
     };
@@ -1220,7 +1163,7 @@ export default function App() {
   };
 
   const transformerAnchorSize = useMemo(() => {
-    if (window.innerWidth < 768) return 26;
+    if (typeof window !== "undefined" && window.innerWidth < 768) return 26;
     return 18;
   }, []);
 
@@ -1320,18 +1263,12 @@ export default function App() {
           <div className="canvas-toolbar">
             <div>
               <strong>SCRL Lite</strong>
-              <span className="sub"> 手機可雙指縮放整個畫布</span>
+              <span className="sub"> 手機版更像 app，吸附更柔和</span>
             </div>
             <div className="toolbar-actions">
-              <button className="ghost" onClick={sendBackward}>
-                下移一層
-              </button>
-              <button className="ghost" onClick={bringForward}>
-                上移一層
-              </button>
-              <button className="ghost danger" onClick={removeSelected}>
-                刪除選取
-              </button>
+              <button className="ghost" onClick={sendBackward}>下移一層</button>
+              <button className="ghost" onClick={bringForward}>上移一層</button>
+              <button className="ghost danger" onClick={removeSelected}>刪除選取</button>
               <button onClick={refreshPreviews}>更新預覽</button>
             </div>
           </div>
@@ -1359,9 +1296,7 @@ export default function App() {
 
             <div
               className="stage-pan-layer"
-              style={{
-                transform: `translate(${pan.x}px, ${pan.y}px)`,
-              }}
+              style={{ transform: `translate(${pan.x}px, ${pan.y}px)` }}
             >
               <div
                 className="stage-scale-box"
@@ -1415,7 +1350,7 @@ export default function App() {
                           <Line
                             key={`slice-${i}`}
                             points={[(i + 1) * singleW, 0, (i + 1) * singleW, canvasH]}
-                            stroke={hexToRgba("#6ba4ff", 0.85)}
+                            stroke={hexToRgba("#6ba4ff", 0.7)}
                             dash={[18, 14]}
                             strokeWidth={3}
                           />
@@ -1424,22 +1359,34 @@ export default function App() {
                       {showGuides && (
                         <>
                           {activeGuides.vertical.map((x, idx) => (
-                            <Line
-                              key={`gv-${idx}`}
-                              points={[x, 0, x, canvasH]}
-                              stroke={hexToRgba("#35f2a1", 0.9)}
-                              dash={[10, 8]}
-                              strokeWidth={2}
-                            />
+                            <React.Fragment key={`gv-${idx}`}>
+                              <Line
+                                points={[x, 0, x, canvasH]}
+                                stroke={hexToRgba("#35f2a1", 0.22)}
+                                strokeWidth={10}
+                              />
+                              <Line
+                                points={[x, 0, x, canvasH]}
+                                stroke={hexToRgba("#35f2a1", 0.98)}
+                                dash={[14, 8]}
+                                strokeWidth={3}
+                              />
+                            </React.Fragment>
                           ))}
                           {activeGuides.horizontal.map((y, idx) => (
-                            <Line
-                              key={`gh-${idx}`}
-                              points={[0, y, canvasW, y]}
-                              stroke={hexToRgba("#35f2a1", 0.9)}
-                              dash={[10, 8]}
-                              strokeWidth={2}
-                            />
+                            <React.Fragment key={`gh-${idx}`}>
+                              <Line
+                                points={[0, y, canvasW, y]}
+                                stroke={hexToRgba("#35f2a1", 0.22)}
+                                strokeWidth={10}
+                              />
+                              <Line
+                                points={[0, y, canvasW, y]}
+                                stroke={hexToRgba("#35f2a1", 0.98)}
+                                dash={[14, 8]}
+                                strokeWidth={3}
+                              />
+                            </React.Fragment>
                           ))}
                         </>
                       )}
@@ -1514,10 +1461,7 @@ export default function App() {
                 <img src={src} alt={`preview-${idx + 1}`} />
                 <button
                   onClick={() =>
-                    downloadDataUrl(
-                      src,
-                      `carousel_${String(idx + 1).padStart(2, "0")}.png`
-                    )
+                    downloadDataUrl(src, `carousel_${String(idx + 1).padStart(2, "0")}.png`)
                   }
                 >
                   下載 #{idx + 1}
@@ -1711,11 +1655,11 @@ export default function App() {
           </div>
 
           <div className="hint-card">
-            <strong>手機操作</strong>
+            <strong>操作提示</strong>
             <br />
             雙指：縮放整個畫布
             <br />
-            單指：平移畫布
+            單指：拖動畫布
             <br />
             雙擊：重設視圖
             <br />
