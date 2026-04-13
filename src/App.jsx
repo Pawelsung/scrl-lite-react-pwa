@@ -101,18 +101,14 @@ function getBestSnap(nextX, nextY, width, height, snapGuides, canvasW, canvasH) 
   for (const guide of snapGuides.vertical) {
     for (const c of xCandidates) {
       const diff = Math.abs(c.value - guide);
-      if (diff < bestV.diff) {
-        bestV = { diff, guide, mode: c.key };
-      }
+      if (diff < bestV.diff) bestV = { diff, guide, mode: c.key };
     }
   }
 
   for (const guide of snapGuides.horizontal) {
     for (const c of yCandidates) {
       const diff = Math.abs(c.value - guide);
-      if (diff < bestH.diff) {
-        bestH = { diff, guide, mode: c.key };
-      }
+      if (diff < bestH.diff) bestH = { diff, guide, mode: c.key };
     }
   }
 
@@ -149,17 +145,18 @@ function DraggableImage({
   canvasW,
   canvasH,
   transformerAnchorSize = 18,
+  editing = true,
 }) {
   const image = useImage(item.src);
   const shapeRef = useRef(null);
   const trRef = useRef(null);
 
   useEffect(() => {
-    if (isSelected && trRef.current && shapeRef.current) {
+    if (editing && isSelected && trRef.current && shapeRef.current) {
       trRef.current.nodes([shapeRef.current]);
       trRef.current.getLayer()?.batchDraw();
     }
-  }, [isSelected]);
+  }, [isSelected, editing]);
 
   return (
     <>
@@ -178,59 +175,71 @@ function DraggableImage({
         shadowOffsetY={item.shadow ? 8 : 0}
         stroke={item.borderWidth ? item.borderColor || "#ffffff" : undefined}
         strokeWidth={item.borderWidth || 0}
-        draggable
-        onClick={onSelect}
-        onTap={onSelect}
-        onDragMove={(e) => {
-          const node = e.target;
-          const snapped = getBestSnap(
-            node.x(),
-            node.y(),
-            item.width,
-            item.height,
-            snapGuides,
-            canvasW,
-            canvasH
-          );
-          node.position({ x: snapped.x, y: snapped.y });
-          onChange({
-            ...item,
-            x: snapped.x,
-            y: snapped.y,
-            snapV: snapped.vertical,
-            snapH: snapped.horizontal,
-          });
-        }}
-        onDragEnd={(e) => {
-          const node = e.target;
-          onChange({
-            ...item,
-            x: node.x(),
-            y: node.y(),
-            snapV: null,
-            snapH: null,
-          });
-        }}
-        onTransformEnd={() => {
-          const node = shapeRef.current;
-          const scaleX = node.scaleX();
-          const scaleY = node.scaleY();
+        draggable={editing}
+        onClick={editing ? onSelect : undefined}
+        onTap={editing ? onSelect : undefined}
+        onDragMove={
+          editing
+            ? (e) => {
+                const node = e.target;
+                const snapped = getBestSnap(
+                  node.x(),
+                  node.y(),
+                  item.width,
+                  item.height,
+                  snapGuides,
+                  canvasW,
+                  canvasH
+                );
+                node.position({ x: snapped.x, y: snapped.y });
+                onChange({
+                  ...item,
+                  x: snapped.x,
+                  y: snapped.y,
+                  snapV: snapped.vertical,
+                  snapH: snapped.horizontal,
+                });
+              }
+            : undefined
+        }
+        onDragEnd={
+          editing
+            ? (e) => {
+                const node = e.target;
+                onChange({
+                  ...item,
+                  x: node.x(),
+                  y: node.y(),
+                  snapV: null,
+                  snapH: null,
+                });
+              }
+            : undefined
+        }
+        onTransformEnd={
+          editing
+            ? () => {
+                const node = shapeRef.current;
+                const scaleX = node.scaleX();
+                const scaleY = node.scaleY();
 
-          const next = {
-            ...item,
-            x: node.x(),
-            y: node.y(),
-            rotation: node.rotation(),
-            width: Math.max(40, node.width() * scaleX),
-            height: Math.max(40, node.height() * scaleY),
-          };
+                const next = {
+                  ...item,
+                  x: node.x(),
+                  y: node.y(),
+                  rotation: node.rotation(),
+                  width: Math.max(40, node.width() * scaleX),
+                  height: Math.max(40, node.height() * scaleY),
+                };
 
-          node.scaleX(1);
-          node.scaleY(1);
-          onChange(next);
-        }}
+                node.scaleX(1);
+                node.scaleY(1);
+                onChange(next);
+              }
+            : undefined
+        }
       />
-      {isSelected && (
+      {editing && isSelected && (
         <Transformer
           ref={trRef}
           rotateEnabled
@@ -259,16 +268,17 @@ function DraggableText({
   canvasW,
   canvasH,
   transformerAnchorSize = 18,
+  editing = true,
 }) {
   const textRef = useRef(null);
   const trRef = useRef(null);
 
   useEffect(() => {
-    if (isSelected && trRef.current && textRef.current) {
+    if (editing && isSelected && trRef.current && textRef.current) {
       trRef.current.nodes([textRef.current]);
       trRef.current.getLayer()?.batchDraw();
     }
-  }, [isSelected]);
+  }, [isSelected, editing]);
 
   const width = item.width || 400;
   const height = item.fontSize * 1.6;
@@ -287,51 +297,63 @@ function DraggableText({
         fill={item.fill || "#111111"}
         align={item.align || "left"}
         opacity={item.opacity ?? 1}
-        draggable
-        onClick={onSelect}
-        onTap={onSelect}
-        onDragMove={(e) => {
-          const node = e.target;
-          const snapped = getBestSnap(
-            node.x(),
-            node.y(),
-            width,
-            height,
-            snapGuides,
-            canvasW,
-            canvasH
-          );
-          node.position({ x: snapped.x, y: snapped.y });
-          onChange({
-            ...item,
-            x: snapped.x,
-            y: snapped.y,
-            snapV: snapped.vertical,
-            snapH: snapped.horizontal,
-          });
-        }}
-        onDragEnd={(e) => {
-          const node = e.target;
-          onChange({ ...item, x: node.x(), y: node.y(), snapV: null, snapH: null });
-        }}
-        onTransformEnd={() => {
-          const node = textRef.current;
-          const scaleX = node.scaleX();
-          const nextWidth = Math.max(120, (item.width || 400) * scaleX);
+        draggable={editing}
+        onClick={editing ? onSelect : undefined}
+        onTap={editing ? onSelect : undefined}
+        onDragMove={
+          editing
+            ? (e) => {
+                const node = e.target;
+                const snapped = getBestSnap(
+                  node.x(),
+                  node.y(),
+                  width,
+                  height,
+                  snapGuides,
+                  canvasW,
+                  canvasH
+                );
+                node.position({ x: snapped.x, y: snapped.y });
+                onChange({
+                  ...item,
+                  x: snapped.x,
+                  y: snapped.y,
+                  snapV: snapped.vertical,
+                  snapH: snapped.horizontal,
+                });
+              }
+            : undefined
+        }
+        onDragEnd={
+          editing
+            ? (e) => {
+                const node = e.target;
+                onChange({ ...item, x: node.x(), y: node.y(), snapV: null, snapH: null });
+              }
+            : undefined
+        }
+        onTransformEnd={
+          editing
+            ? () => {
+                const node = textRef.current;
+                const scaleX = node.scaleX();
+                const nextWidth = Math.max(120, (item.width || 400) * scaleX);
 
-          node.scaleX(1);
-          node.scaleY(1);
+                node.scaleX(1);
+                node.scaleY(1);
 
-          onChange({
-            ...item,
-            x: node.x(),
-            y: node.y(),
-            width: nextWidth,
-            rotation: node.rotation(),
-          });
-        }}
+                onChange({
+                  ...item,
+                  x: node.x(),
+                  y: node.y(),
+                  width: nextWidth,
+                  rotation: node.rotation(),
+                });
+              }
+            : undefined
+        }
       />
-      {isSelected && (
+      {editing && isSelected && (
         <Transformer
           ref={trRef}
           rotateEnabled
@@ -359,16 +381,17 @@ function StickerShape({
   canvasW,
   canvasH,
   transformerAnchorSize = 18,
+  editing = true,
 }) {
   const groupRef = useRef(null);
   const trRef = useRef(null);
 
   useEffect(() => {
-    if (isSelected && trRef.current && groupRef.current) {
+    if (editing && isSelected && trRef.current && groupRef.current) {
       trRef.current.nodes([groupRef.current]);
       trRef.current.getLayer()?.batchDraw();
     }
-  }, [isSelected]);
+  }, [isSelected, editing]);
 
   const width = item.width;
   const height = item.height;
@@ -381,47 +404,59 @@ function StickerShape({
         y={item.y}
         rotation={item.rotation || 0}
         opacity={item.opacity ?? 1}
-        draggable
-        onClick={onSelect}
-        onTap={onSelect}
-        onDragMove={(e) => {
-          const node = e.target;
-          const snapped = getBestSnap(
-            node.x(),
-            node.y(),
-            width,
-            height,
-            snapGuides,
-            canvasW,
-            canvasH
-          );
-          node.position({ x: snapped.x, y: snapped.y });
-          onChange({
-            ...item,
-            x: snapped.x,
-            y: snapped.y,
-            snapV: snapped.vertical,
-            snapH: snapped.horizontal,
-          });
-        }}
-        onDragEnd={(e) => {
-          const node = e.target;
-          onChange({ ...item, x: node.x(), y: node.y(), snapV: null, snapH: null });
-        }}
-        onTransformEnd={() => {
-          const node = groupRef.current;
-          const next = {
-            ...item,
-            x: node.x(),
-            y: node.y(),
-            rotation: node.rotation(),
-            width: Math.max(30, item.width * node.scaleX()),
-            height: Math.max(30, item.height * node.scaleY()),
-          };
-          node.scaleX(1);
-          node.scaleY(1);
-          onChange(next);
-        }}
+        draggable={editing}
+        onClick={editing ? onSelect : undefined}
+        onTap={editing ? onSelect : undefined}
+        onDragMove={
+          editing
+            ? (e) => {
+                const node = e.target;
+                const snapped = getBestSnap(
+                  node.x(),
+                  node.y(),
+                  width,
+                  height,
+                  snapGuides,
+                  canvasW,
+                  canvasH
+                );
+                node.position({ x: snapped.x, y: snapped.y });
+                onChange({
+                  ...item,
+                  x: snapped.x,
+                  y: snapped.y,
+                  snapV: snapped.vertical,
+                  snapH: snapped.horizontal,
+                });
+              }
+            : undefined
+        }
+        onDragEnd={
+          editing
+            ? (e) => {
+                const node = e.target;
+                onChange({ ...item, x: node.x(), y: node.y(), snapV: null, snapH: null });
+              }
+            : undefined
+        }
+        onTransformEnd={
+          editing
+            ? () => {
+                const node = groupRef.current;
+                const next = {
+                  ...item,
+                  x: node.x(),
+                  y: node.y(),
+                  rotation: node.rotation(),
+                  width: Math.max(30, item.width * node.scaleX()),
+                  height: Math.max(30, item.height * node.scaleY()),
+                };
+                node.scaleX(1);
+                node.scaleY(1);
+                onChange(next);
+              }
+            : undefined
+        }
       >
         {item.stickerType === "tape" && (
           <Rect
@@ -434,12 +469,7 @@ function StickerShape({
           />
         )}
         {item.stickerType === "circle" && (
-          <Rect
-            width={item.width}
-            height={item.height}
-            cornerRadius={999}
-            fill={item.fill || "#ffffff"}
-          />
+          <Rect width={item.width} height={item.height} cornerRadius={999} fill={item.fill || "#ffffff"} />
         )}
         {item.stickerType === "star" && (
           <Line
@@ -462,7 +492,7 @@ function StickerShape({
           />
         )}
       </Group>
-      {isSelected && (
+      {editing && isSelected && (
         <Transformer
           ref={trRef}
           rotateEnabled
@@ -494,6 +524,7 @@ export default function App() {
 
   const [userZoom, setUserZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isExporting, setIsExporting] = useState(false);
 
   const containerRef = useRef(null);
   const stageRef = useRef(null);
@@ -546,12 +577,9 @@ export default function App() {
     const viewportH = containerSize.h;
     const minX = Math.min(0, viewportW - scaledW - 24);
     const minY = Math.min(0, viewportH - scaledH - 24);
-    const maxX = 0;
-    const maxY = 0;
-
     return {
-      x: clamp(nextX, minX, maxX),
-      y: clamp(nextY, minY, maxY),
+      x: clamp(nextX, minX, 0),
+      y: clamp(nextY, minY, 0),
     };
   };
 
@@ -888,9 +916,19 @@ export default function App() {
     setSelectedId(null);
   };
 
-  const exportSlices = () => {
+  const exportSlices = async () => {
+    setIsExporting(true);
+    const previousSelected = selectedId;
+    setSelectedId(null);
+
+    await new Promise((r) => setTimeout(r, 40));
+
     const stage = stageRef.current;
-    if (!stage) return [];
+    if (!stage) {
+      setIsExporting(false);
+      return [];
+    }
+
     const list = [];
     for (let i = 0; i < slides; i++) {
       const dataUrl = stage.toDataURL({
@@ -902,19 +940,23 @@ export default function App() {
       });
       list.push(dataUrl);
     }
+
+    setIsExporting(false);
+    setSelectedId(previousSelected);
     return list;
   };
 
-  const refreshPreviews = () => {
-    const data = exportSlices();
+  const refreshPreviews = async () => {
+    const data = await exportSlices();
     setPreviews(data);
   };
 
   useEffect(() => {
     const timer = setTimeout(() => {
       refreshPreviews();
-    }, 80);
+    }, 100);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elements, slides, ratioKey, bgPrimary, bgSecondary, backgroundMode]);
 
   const downloadDataUrl = (dataUrl, filename) => {
@@ -924,8 +966,8 @@ export default function App() {
     a.click();
   };
 
-  const downloadAll = () => {
-    const data = exportSlices();
+  const downloadAll = async () => {
+    const data = await exportSlices();
     data.forEach((src, idx) => {
       setTimeout(() => {
         downloadDataUrl(src, `carousel_${String(idx + 1).padStart(2, "0")}.png`);
@@ -944,9 +986,7 @@ export default function App() {
       elements,
       templateId,
     };
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: "application/json",
-    });
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     downloadDataUrl(url, "scrl-lite-project.json");
     URL.revokeObjectURL(url);
@@ -1027,16 +1067,7 @@ export default function App() {
 
   const renderBackground = () => {
     if (backgroundMode === "solid") {
-      return (
-        <Rect
-          x={0}
-          y={0}
-          width={canvasW}
-          height={canvasH}
-          fill={bgPrimary}
-          cornerRadius={40}
-        />
-      );
+      return <Rect x={0} y={0} width={canvasW} height={canvasH} fill={bgPrimary} cornerRadius={40} />;
     }
 
     return (
@@ -1065,14 +1096,10 @@ export default function App() {
 
   const getMidpoint = (touches) => {
     const [a, b] = touches;
-    return {
-      x: (a.clientX + b.clientX) / 2,
-      y: (a.clientY + b.clientY) / 2,
-    };
+    return { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 };
   };
 
   const handleViewportPointerDown = (e) => {
-    if (e.target.closest(".canvas-zoom-toolbar")) return;
     gestureRef.current.isPanning = true;
     gestureRef.current.startX = e.clientX;
     gestureRef.current.startY = e.clientY;
@@ -1120,21 +1147,15 @@ export default function App() {
       const distance = getDistance(e.touches);
       const midpoint = getMidpoint(e.touches);
       const ratio = distance / gestureRef.current.pinchStartDistance;
-      const nextZoom = clamp(
-        gestureRef.current.pinchStartZoom * ratio,
-        MIN_ZOOM,
-        MAX_ZOOM
-      );
+      const nextZoom = clamp(gestureRef.current.pinchStartZoom * ratio, MIN_ZOOM, MAX_ZOOM);
 
       const oldScale = fitScale * gestureRef.current.pinchStartZoom;
       const newScale = fitScale * nextZoom;
 
       const contentX =
-        (gestureRef.current.pinchCenter.x - gestureRef.current.pinchStartPan.x) /
-        oldScale;
+        (gestureRef.current.pinchCenter.x - gestureRef.current.pinchStartPan.x) / oldScale;
       const contentY =
-        (gestureRef.current.pinchCenter.y - gestureRef.current.pinchStartPan.y) /
-        oldScale;
+        (gestureRef.current.pinchCenter.y - gestureRef.current.pinchStartPan.y) / oldScale;
 
       let nextPanX = midpoint.x - contentX * newScale;
       let nextPanY = midpoint.y - contentY * newScale;
@@ -1174,13 +1195,7 @@ export default function App() {
           <h2>專案</h2>
           <label className="field">
             <span>輪播張數</span>
-            <input
-              type="range"
-              min="2"
-              max="10"
-              value={slides}
-              onChange={(e) => setSlides(Number(e.target.value))}
-            />
+            <input type="range" min="2" max="10" value={slides} onChange={(e) => setSlides(Number(e.target.value))} />
             <strong>{slides} 張</strong>
           </label>
 
@@ -1188,58 +1203,30 @@ export default function App() {
             <span>比例</span>
             <select value={ratioKey} onChange={(e) => setRatioKey(e.target.value)}>
               {Object.keys(RATIOS).map((key) => (
-                <option key={key} value={key}>
-                  {key}
-                </option>
+                <option key={key} value={key}>{key}</option>
               ))}
             </select>
           </label>
 
           <div className="button-row">
             <button onClick={() => fileRef.current?.click()}>上傳圖片</button>
-            <button className="ghost" onClick={addText}>
-              新增文字
-            </button>
+            <button className="ghost" onClick={addText}>新增文字</button>
           </div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            multiple
-            hidden
-            onChange={onUploadFiles}
-          />
+          <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onUploadFiles} />
 
           <div className="button-row">
-            <button className="ghost" onClick={exportProject}>
-              匯出 JSON
-            </button>
-            <button className="ghost" onClick={() => importRef.current?.click()}>
-              匯入 JSON
-            </button>
+            <button className="ghost" onClick={exportProject}>匯出 JSON</button>
+            <button className="ghost" onClick={() => importRef.current?.click()}>匯入 JSON</button>
           </div>
-          <input
-            ref={importRef}
-            type="file"
-            accept="application/json"
-            hidden
-            onChange={importProject}
-          />
+          <input ref={importRef} type="file" accept="application/json" hidden onChange={importProject} />
         </div>
 
         <div className="panel">
           <h2>素材</h2>
           <div className="asset-grid">
-            {images.length === 0 && (
-              <div className="hint-card">先上傳圖片，再點縮圖加入畫布。</div>
-            )}
+            {images.length === 0 && <div className="hint-card">先上傳圖片，再點縮圖加入畫布。</div>}
             {images.map((img) => (
-              <button
-                key={img.id}
-                className="asset-btn"
-                onClick={() => addImageToCanvas(img)}
-                title={img.name}
-              >
+              <button key={img.id} className="asset-btn" onClick={() => addImageToCanvas(img)} title={img.name}>
                 <img src={img.src} alt={img.name} />
               </button>
             ))}
@@ -1263,7 +1250,7 @@ export default function App() {
           <div className="canvas-toolbar">
             <div>
               <strong>SCRL Lite</strong>
-              <span className="sub"> 手機版更像 app，吸附更柔和</span>
+              <span className="sub"> 匯出已排除編輯輔助元素</span>
             </div>
             <div className="toolbar-actions">
               <button className="ghost" onClick={sendBackward}>下移一層</button>
@@ -1286,24 +1273,13 @@ export default function App() {
             onTouchCancel={handleViewportTouchEnd}
             onDoubleClick={resetView}
           >
-            <div className="canvas-zoom-toolbar">
-              <button onClick={zoomOut}>－</button>
-              <button onClick={zoomIn}>＋</button>
-              <button onClick={fitToScreen}>Fit</button>
-              <button onClick={zoom100}>100%</button>
-              <div className="zoom-readout">{Math.round(displayScale * 100)}%</div>
-            </div>
-
             <div
               className="stage-pan-layer"
               style={{ transform: `translate(${pan.x}px, ${pan.y}px)` }}
             >
               <div
                 className="stage-scale-box"
-                style={{
-                  width: canvasW * displayScale,
-                  height: canvasH * displayScale,
-                }}
+                style={{ width: canvasW * displayScale, height: canvasH * displayScale }}
               >
                 <div
                   className="stage-real-size"
@@ -1345,7 +1321,7 @@ export default function App() {
                         />
                       ))}
 
-                      {showGuides &&
+                      {!isExporting && showGuides &&
                         Array.from({ length: slides - 1 }).map((_, i) => (
                           <Line
                             key={`slice-${i}`}
@@ -1356,36 +1332,18 @@ export default function App() {
                           />
                         ))}
 
-                      {showGuides && (
+                      {!isExporting && showGuides && (
                         <>
                           {activeGuides.vertical.map((x, idx) => (
                             <React.Fragment key={`gv-${idx}`}>
-                              <Line
-                                points={[x, 0, x, canvasH]}
-                                stroke={hexToRgba("#35f2a1", 0.22)}
-                                strokeWidth={10}
-                              />
-                              <Line
-                                points={[x, 0, x, canvasH]}
-                                stroke={hexToRgba("#35f2a1", 0.98)}
-                                dash={[14, 8]}
-                                strokeWidth={3}
-                              />
+                              <Line points={[x, 0, x, canvasH]} stroke={hexToRgba("#35f2a1", 0.22)} strokeWidth={10} />
+                              <Line points={[x, 0, x, canvasH]} stroke={hexToRgba("#35f2a1", 0.98)} dash={[14, 8]} strokeWidth={3} />
                             </React.Fragment>
                           ))}
                           {activeGuides.horizontal.map((y, idx) => (
                             <React.Fragment key={`gh-${idx}`}>
-                              <Line
-                                points={[0, y, canvasW, y]}
-                                stroke={hexToRgba("#35f2a1", 0.22)}
-                                strokeWidth={10}
-                              />
-                              <Line
-                                points={[0, y, canvasW, y]}
-                                stroke={hexToRgba("#35f2a1", 0.98)}
-                                dash={[14, 8]}
-                                strokeWidth={3}
-                              />
+                              <Line points={[0, y, canvasW, y]} stroke={hexToRgba("#35f2a1", 0.22)} strokeWidth={10} />
+                              <Line points={[0, y, canvasW, y]} stroke={hexToRgba("#35f2a1", 0.98)} dash={[14, 8]} strokeWidth={3} />
                             </React.Fragment>
                           ))}
                         </>
@@ -1404,6 +1362,7 @@ export default function App() {
                               canvasW={canvasW}
                               canvasH={canvasH}
                               transformerAnchorSize={transformerAnchorSize}
+                              editing={!isExporting}
                             />
                           );
                         }
@@ -1420,6 +1379,7 @@ export default function App() {
                               canvasW={canvasW}
                               canvasH={canvasH}
                               transformerAnchorSize={transformerAnchorSize}
+                              editing={!isExporting}
                             />
                           );
                         }
@@ -1436,6 +1396,7 @@ export default function App() {
                               canvasW={canvasW}
                               canvasH={canvasH}
                               transformerAnchorSize={transformerAnchorSize}
+                              editing={!isExporting}
                             />
                           );
                         }
@@ -1448,6 +1409,14 @@ export default function App() {
               </div>
             </div>
           </div>
+
+          <div className="mobile-bottom-bar">
+            <button onClick={zoomOut}>－</button>
+            <button onClick={zoomIn}>＋</button>
+            <button onClick={fitToScreen}>Fit</button>
+            <button onClick={zoom100}>100%</button>
+            <div className="mobile-zoom-readout">{Math.round(displayScale * 100)}%</div>
+          </div>
         </div>
 
         <div className="preview-panel">
@@ -1459,11 +1428,7 @@ export default function App() {
             {previews.map((src, idx) => (
               <div key={idx} className="preview-card">
                 <img src={src} alt={`preview-${idx + 1}`} />
-                <button
-                  onClick={() =>
-                    downloadDataUrl(src, `carousel_${String(idx + 1).padStart(2, "0")}.png`)
-                  }
-                >
+                <button onClick={() => downloadDataUrl(src, `carousel_${String(idx + 1).padStart(2, "0")}.png`)}>
                   下載 #{idx + 1}
                 </button>
               </div>
@@ -1521,52 +1486,23 @@ export default function App() {
             <>
               <label className="field">
                 <span>圓角</span>
-                <input
-                  type="range"
-                  min="0"
-                  max="120"
-                  value={selectedItem.radius || 0}
-                  onChange={(e) => updateElement({ ...selectedItem, radius: Number(e.target.value) })}
-                />
+                <input type="range" min="0" max="120" value={selectedItem.radius || 0} onChange={(e) => updateElement({ ...selectedItem, radius: Number(e.target.value) })} />
               </label>
               <label className="field">
                 <span>陰影</span>
-                <input
-                  type="range"
-                  min="0"
-                  max="40"
-                  value={selectedItem.shadow || 0}
-                  onChange={(e) => updateElement({ ...selectedItem, shadow: Number(e.target.value) })}
-                />
+                <input type="range" min="0" max="40" value={selectedItem.shadow || 0} onChange={(e) => updateElement({ ...selectedItem, shadow: Number(e.target.value) })} />
               </label>
               <label className="field">
                 <span>透明度</span>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="1"
-                  step="0.01"
-                  value={selectedItem.opacity ?? 1}
-                  onChange={(e) => updateElement({ ...selectedItem, opacity: Number(e.target.value) })}
-                />
+                <input type="range" min="0.1" max="1" step="0.01" value={selectedItem.opacity ?? 1} onChange={(e) => updateElement({ ...selectedItem, opacity: Number(e.target.value) })} />
               </label>
               <label className="field">
                 <span>邊框粗細</span>
-                <input
-                  type="range"
-                  min="0"
-                  max="20"
-                  value={selectedItem.borderWidth || 0}
-                  onChange={(e) => updateElement({ ...selectedItem, borderWidth: Number(e.target.value) })}
-                />
+                <input type="range" min="0" max="20" value={selectedItem.borderWidth || 0} onChange={(e) => updateElement({ ...selectedItem, borderWidth: Number(e.target.value) })} />
               </label>
               <label className="field">
                 <span>邊框顏色</span>
-                <input
-                  type="color"
-                  value={selectedItem.borderColor || "#ffffff"}
-                  onChange={(e) => updateElement({ ...selectedItem, borderColor: e.target.value })}
-                />
+                <input type="color" value={selectedItem.borderColor || "#ffffff"} onChange={(e) => updateElement({ ...selectedItem, borderColor: e.target.value })} />
               </label>
             </>
           )}
@@ -1575,36 +1511,19 @@ export default function App() {
             <>
               <label className="field">
                 <span>文字內容</span>
-                <textarea
-                  rows="4"
-                  value={selectedItem.text}
-                  onChange={(e) => updateElement({ ...selectedItem, text: e.target.value })}
-                />
+                <textarea rows="4" value={selectedItem.text} onChange={(e) => updateElement({ ...selectedItem, text: e.target.value })} />
               </label>
               <label className="field">
                 <span>字體大小</span>
-                <input
-                  type="range"
-                  min="16"
-                  max="180"
-                  value={selectedItem.fontSize}
-                  onChange={(e) => updateElement({ ...selectedItem, fontSize: Number(e.target.value) })}
-                />
+                <input type="range" min="16" max="180" value={selectedItem.fontSize} onChange={(e) => updateElement({ ...selectedItem, fontSize: Number(e.target.value) })} />
               </label>
               <label className="field">
                 <span>顏色</span>
-                <input
-                  type="color"
-                  value={selectedItem.fill || "#111111"}
-                  onChange={(e) => updateElement({ ...selectedItem, fill: e.target.value })}
-                />
+                <input type="color" value={selectedItem.fill || "#111111"} onChange={(e) => updateElement({ ...selectedItem, fill: e.target.value })} />
               </label>
               <label className="field">
                 <span>字重</span>
-                <select
-                  value={selectedItem.fontStyle || "normal"}
-                  onChange={(e) => updateElement({ ...selectedItem, fontStyle: e.target.value })}
-                >
+                <select value={selectedItem.fontStyle || "normal"} onChange={(e) => updateElement({ ...selectedItem, fontStyle: e.target.value })}>
                   <option value="normal">normal</option>
                   <option value="bold">bold</option>
                   <option value="italic">italic</option>
@@ -1612,10 +1531,7 @@ export default function App() {
               </label>
               <label className="field">
                 <span>對齊</span>
-                <select
-                  value={selectedItem.align || "left"}
-                  onChange={(e) => updateElement({ ...selectedItem, align: e.target.value })}
-                >
+                <select value={selectedItem.align || "left"} onChange={(e) => updateElement({ ...selectedItem, align: e.target.value })}>
                   <option value="left">left</option>
                   <option value="center">center</option>
                   <option value="right">right</option>
@@ -1628,22 +1544,11 @@ export default function App() {
             <>
               <label className="field">
                 <span>顏色</span>
-                <input
-                  type="color"
-                  value={selectedItem.fill || "#ffffff"}
-                  onChange={(e) => updateElement({ ...selectedItem, fill: e.target.value })}
-                />
+                <input type="color" value={selectedItem.fill || "#ffffff"} onChange={(e) => updateElement({ ...selectedItem, fill: e.target.value })} />
               </label>
               <label className="field">
                 <span>透明度</span>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="1"
-                  step="0.01"
-                  value={selectedItem.opacity ?? 1}
-                  onChange={(e) => updateElement({ ...selectedItem, opacity: Number(e.target.value) })}
-                />
+                <input type="range" min="0.1" max="1" step="0.01" value={selectedItem.opacity ?? 1} onChange={(e) => updateElement({ ...selectedItem, opacity: Number(e.target.value) })} />
               </label>
             </>
           )}
@@ -1652,18 +1557,6 @@ export default function App() {
             <button className="ghost" onClick={() => setShowGuides((v) => !v)}>
               {showGuides ? "隱藏參考線" : "顯示參考線"}
             </button>
-          </div>
-
-          <div className="hint-card">
-            <strong>操作提示</strong>
-            <br />
-            雙指：縮放整個畫布
-            <br />
-            單指：拖動畫布
-            <br />
-            雙擊：重設視圖
-            <br />
-            Ctrl / ⌘ + 滾輪：等比縮放選取物件
           </div>
         </div>
       </aside>

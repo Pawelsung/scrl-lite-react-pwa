@@ -1,14 +1,10 @@
 :root {
   --bg: #0b0f17;
   --panel: #121926;
-  --panel-2: #171f2d;
   --line: #263246;
   --text: #f4f7fb;
   --muted: #9ba8bb;
-  --accent: #4b86ff;
-  --accent-2: #35f2a1;
   --danger: #ff6b6b;
-  --radius: 18px;
   --radius-lg: 24px;
   --shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
 }
@@ -76,7 +72,6 @@ button {
 .panel h2 {
   margin: 0 0 14px;
   font-size: 18px;
-  line-height: 1.2;
 }
 
 .field {
@@ -130,11 +125,6 @@ button {
   border: none;
   border-radius: 14px;
   padding: 12px 16px;
-  transition: transform 0.12s ease, opacity 0.12s ease, background 0.12s ease;
-}
-
-button:hover {
-  transform: translateY(-1px);
 }
 
 button.ghost {
@@ -247,34 +237,6 @@ button.danger {
   touch-action: none;
 }
 
-.canvas-zoom-toolbar {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 20;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  background: rgba(8, 12, 18, 0.78);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 8px;
-  backdrop-filter: blur(12px);
-}
-
-.canvas-zoom-toolbar button {
-  padding: 10px 12px;
-  min-width: 48px;
-}
-
-.zoom-readout {
-  min-width: 64px;
-  text-align: center;
-  color: var(--muted);
-  font-size: 14px;
-  padding: 0 6px;
-}
-
 .stage-pan-layer {
   position: absolute;
   left: 16px;
@@ -294,6 +256,10 @@ button.danger {
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
   border-radius: 40px;
   overflow: hidden;
+}
+
+.mobile-bottom-bar {
+  display: none;
 }
 
 .preview-panel {
@@ -421,8 +387,14 @@ button.danger {
     width: 100%;
   }
 
+  .canvas-panel {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
   .canvas-stage-wrap {
     padding: 10px;
+    height: 100%;
   }
 
   .stage-pan-layer {
@@ -430,32 +402,31 @@ button.danger {
     top: 10px;
   }
 
-  .canvas-zoom-toolbar {
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
-    top: auto;
-    border-radius: 18px;
-    padding: 10px;
-    gap: 8px;
+  .mobile-bottom-bar {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 10px;
+    border-top: 1px solid var(--line);
+    background: rgba(8, 12, 18, 0.92);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
   }
 
-  .canvas-zoom-toolbar button {
-    min-width: 0;
-    width: 100%;
+  .mobile-bottom-bar button {
     padding: 12px 8px;
-    font-size: 14px;
     border-radius: 12px;
+    min-width: 0;
   }
 
-  .zoom-readout {
+  .mobile-zoom-readout {
     grid-column: 1 / -1;
-    width: 100%;
     text-align: center;
-    padding-top: 4px;
+    color: var(--muted);
     font-size: 13px;
+    padding-top: 2px;
   }
 
   .preview-grid {
